@@ -3,105 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Focus Pro</title>
+    <title>Focus Pro 3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #020617; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-        .glass { background: #1e293b; border-radius: 1.5rem; border: 1px solid #334155; }
+        /* Примусова темна тема */
+        body { background-color: #020617 !important; color: #f8fafc !important; font-family: sans-serif; }
+        .card { background: #1e293b; border-radius: 1.5rem; padding: 1.5rem; border: 1px solid #334155; }
+        
+        /* Стилізація вибору дати */
         input[type="datetime-local"] {
-            background: #0f172a; color: #38bdf8; border: 1px solid #334155;
-            padding: 8px; border-radius: 12px; font-weight: bold; font-size: 14px;
+            background: #334155;
+            color: #38bdf8;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            width: 100%;
+            max-width: 250px;
+            text-align: center;
         }
-        .timer-val { font-variant-numeric: tabular-nums; letter-spacing: -2px; }
-        .expired { color: #ef4444; }
-        [contenteditable] { outline: none; transition: all 0.2s; }
-        [contenteditable]:focus { color: #38bdf8; }
+        
+        .timer-big { font-size: 4rem; line-height: 1; font-weight: 900; color: #38bdf8; letter-spacing: -2px; }
+        [contenteditable] { border-bottom: 1px dashed #475569; padding-bottom: 2px; outline: none; }
+        [contenteditable]:focus { border-bottom-color: #38bdf8; color: #38bdf8; }
     </style>
 </head>
 <body class="p-6">
 
-    <div class="text-center mb-8">
-        <div id="current-time" class="text-gray-500 text-xs tracking-[0.3em] font-bold uppercase mb-4">18:00:00</div>
+    <div class="text-center mb-10">
+        <div id="now" class="text-gray-500 text-xs tracking-widest mb-6">00:00:00</div>
         
-        <div id="main-task" contenteditable="true" class="text-3xl font-extrabold tracking-tight leading-tight mb-6 px-2">
-            Введіть головну мету...
+        <h1 id="main-goal" contenteditable="true" class="text-3xl font-bold mb-8 leading-tight px-4 text-white">
+            Натисніть тут, щоб вписати головну ціль
+        </h1>
+
+        <div class="space-y-3">
+            <p class="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black">Встановити дедлайн:</p>
+            <input type="datetime-local" id="picker">
         </div>
 
-        <div class="flex flex-col items-center space-y-3">
-            <label class="text-[10px] text-gray-500 uppercase tracking-widest font-black">Встановити дедлайн:</label>
-            <input type="datetime-local" id="deadline-picker">
-        </div>
-
-        <div class="mt-8">
-            <div id="timer-display" class="text-6xl font-black timer-val text-blue-400">00:00:00</div>
-            <p id="timer-status" class="text-[10px] text-gray-500 uppercase mt-2 tracking-widest">залишилося часу</p>
+        <div class="mt-10">
+            <div id="timer" class="timer-big">00:00:00</div>
+            <p id="status" class="text-[10px] text-gray-400 uppercase tracking-widest mt-2">залишилося часу</p>
         </div>
     </div>
 
     <div class="space-y-4">
-        <div class="glass p-6">
-            <div class="flex items-center mb-4">
-                <span class="bg-blue-500 w-2 h-6 rounded-full mr-3"></span>
-                <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest">Пріоритети</h2>
-            </div>
-            <div id="p-list" contenteditable="true" class="text-lg text-slate-300 leading-relaxed whitespace-pre-wrap">1. 
+        <div class="card">
+            <h2 class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-4">🎯 Пріоритети дня</h2>
+            <div id="tasks" contenteditable="true" class="text-lg text-slate-300 whitespace-pre-wrap leading-relaxed">1. 
 2. </div>
         </div>
 
-        <div class="glass p-6 border-b-4 border-amber-500/50">
-            <h2 class="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-2">Важливі нотатки</h2>
-            <div id="notes" contenteditable="true" class="text-slate-400 italic">Натисніть, щоб додати...</div>
+        <div class="card border-l-4 border-amber-500">
+            <h2 class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">⚠️ Важливо</h2>
+            <div id="notes" contenteditable="true" class="text-sm text-slate-400 italic">Додайте важливі деталі тут...</div>
         </div>
     </div>
 
     <script>
-        const timerDisplay = document.getElementById('timer-display');
-        const deadlinePicker = document.getElementById('deadline-picker');
+        const picker = document.getElementById('picker');
+        const timer = document.getElementById('timer');
+        const status = document.getElementById('status');
 
-        // Встановлення початкового значення (сьогодні + 1 година)
-        if (!localStorage.getItem('deadline-picker')) {
-            const now = new Date();
-            now.setHours(now.getHours() + 1);
-            deadlinePicker.value = now.toISOString().slice(0, 16);
+        // Ініціалізація дати (за замовчуванням +1 година)
+        if (!localStorage.getItem('picker')) {
+            const d = new Date();
+            d.setHours(d.getHours() + 1);
+            picker.value = d.toISOString().slice(0, 16);
         }
 
-        function update() {
-            // 1. Поточний годинник
-            document.getElementById('current-time').innerText = new Date().toLocaleTimeString('uk-UA');
+        function refresh() {
+            // Поточний час
+            document.getElementById('now').innerText = new Date().toLocaleTimeString('uk-UA');
 
-            // 2. Логіка таймера
-            const target = new Date(deadlinePicker.value).getTime();
-            const now = new Date().getTime();
-            const diff = target - now;
+            // Розрахунок дедлайну
+            const target = new Date(picker.value).getTime();
+            const diff = target - new Date().getTime();
 
             if (diff <= 0) {
-                timerDisplay.innerText = "00:00:00";
-                timerDisplay.classList.add('expired');
-                document.getElementById('timer-status').innerText = "Час вийшов!";
+                timer.innerText = "00:00:00";
+                timer.style.color = "#ef4444";
+                status.innerText = "ЧАС ВИЙШОВ";
             } else {
-                timerDisplay.classList.remove('expired');
-                document.getElementById('timer-status').innerText = "залишилося часу";
-                
+                timer.style.color = "#38bdf8";
+                status.innerText = "залишилося часу";
                 const h = Math.floor(diff / 3600000);
                 const m = Math.floor((diff % 3600000) / 60000);
                 const s = Math.floor((diff % 60000) / 1000);
-                
-                timerDisplay.innerText = 
-                    `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                timer.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
             }
         }
 
-        setInterval(update, 1000);
+        setInterval(refresh, 1000);
 
-        // Збереження
-        const fields = ['main-task', 'deadline-picker', 'p-list', 'notes'];
-        fields.forEach(id => {
+        // Збереження даних
+        const store = ['main-goal', 'picker', 'tasks', 'notes'];
+        store.forEach(id => {
             const el = document.getElementById(id);
-            const val = localStorage.getItem(id);
-            if (val) id === 'deadline-picker' ? el.value = val : el.innerText = val;
-            
+            if (localStorage.getItem(id)) {
+                if (id === 'picker') el.value = localStorage.getItem(id);
+                else el.innerText = localStorage.getItem(id);
+            }
             el.addEventListener('input', () => {
-                localStorage.setItem(id, id === 'deadline-picker' ? el.value : el.innerText);
+                localStorage.setItem(id, id === 'picker' ? el.value : el.innerText);
             });
         });
     </script>
