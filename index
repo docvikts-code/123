@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Focus Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0f172a; color: #f1f5f9; font-family: sans-serif; -webkit-font-smoothing: antialiased; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 1.5rem; }
+        .focus-gradient { background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, rgba(15, 23, 42, 0) 100%); }
+        [contenteditable] { outline: none; display: inline-block; }
+        .timer-active { color: #60a5fa; font-variant-numeric: tabular-nums; }
+        .timer-warning { color: #f87171; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body class="p-4 pb-12 focus-gradient">
+
+    <div class="text-center mt-6 mb-8">
+        <div id="clock" class="text-sm font-medium text-gray-500 tracking-widest mb-2">00:00:00</div>
+        
+        <div class="mb-1">
+            <span id="focus-task" contenteditable="true" class="text-2xl font-bold tracking-tight text-white border-b border-dashed border-gray-600 pb-1">
+                Підготувати звіт для ради директорів
+            </span>
+        </div>
+
+        <div class="mt-4 flex flex-col items-center">
+            <div class="flex items-center space-x-2 text-gray-400 text-xs uppercase tracking-widest mb-1">
+                <span>Дедлайн:</span>
+                <span id="deadline-time" contenteditable="true" class="font-bold text-blue-400 bg-blue-900/30 px-2 py-0.5 rounded">19:00</span>
+            </div>
+            
+            <div id="countdown-display" class="text-5xl font-black tracking-tighter timer-active mt-1">
+                00:00:00
+            </div>
+            <div id="countdown-label" class="text-[10px] text-gray-500 uppercase mt-1 tracking-widest leading-none">залишилося часу</div>
+        </div>
+    </div>
+
+    <div class="grid gap-4">
+        <div class="glass p-5">
+            <h2 class="text-xs font-black text-gray-500 mb-4 tracking-widest uppercase italic">🎯 ПРІОРИТЕТИ</h2>
+            <div id="p-list" contenteditable="true" class="text-lg space-y-2 whitespace-pre-wrap leading-tight">1. Перевірити KPI
+2. Колл з маркетингом</div>
+        </div>
+
+        <div class="glass p-5 border-l-4 border-yellow-500">
+            <h2 class="text-xs font-black text-yellow-500 mb-2 tracking-widest uppercase">⚠️ НОТАТКИ</h2>
+            <div id="notes" contenteditable="true" class="text-sm text-gray-200">Терміново відповісти в Slack...</div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Поточний час
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('uk-UA');
+        }
+        setInterval(updateClock, 1000);
+
+        // 2. Логіка відліку
+        function updateCountdown() {
+            const deadlineInput = document.getElementById('deadline-time').innerText;
+            const display = document.getElementById('countdown-display');
+            
+            const now = new Date();
+            const [hours, minutes] = deadlineInput.split(':').map(Number);
+            
+            const deadline = new Date();
+            deadline.setHours(hours, minutes, 0, 0);
+
+            // Якщо час дедлайну вже минув сьогодні (наприклад, поставили на завтра)
+            if (deadline < now) {
+                deadline.setDate(deadline.getDate() + 1);
+            }
+
+            const diff = deadline - now;
+            
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+            display.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            // Зміна стилю, якщо лишилося мало часу
+            if (diff < 900000) { // 15 хвилин
+                display.className = "text-5xl font-black tracking-tighter timer-warning mt-1";
+            } else {
+                display.className = "text-5xl font-black tracking-tighter timer-active mt-1";
+            }
+        }
+        setInterval(updateCountdown, 1000);
+
+        // 3. Автозбереження
+        const saveIds = ['focus-task', 'deadline-time', 'p-list', 'notes'];
+        saveIds.forEach(id => {
+            const el = document.getElementById(id);
+            if(localStorage.getItem(id)) el.innerText = localStorage.getItem(id);
+            el.addEventListener('input', () => localStorage.setItem(id, el.innerText));
+        });
+    </script>
+</body>
+</html>
